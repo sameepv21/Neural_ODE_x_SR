@@ -124,7 +124,7 @@ def get_batch_two_t_fixed(data, t, batch_len=60, batch_size=100, device = torch.
 def get_batch_two_single(data, t, batch_len=60, batch_size=100, device = torch.device("cpu"), reverse=False):
 	s = torch.from_numpy(np.random.choice(np.arange(len(t) - batch_len, dtype=np.int64), batch_size, replace=False))
 	batch_y0 = data[0,s,:]  # (M, D)
-	batch_t = t[:batch_len]  # (T)
+	batch_t = t[:batch_len]  # (T) 
 	batch_y = torch.stack([data[0,s + i,:] for i in range(batch_len)], dim=1)  # (T, M, D)
 	
 	batch_y0_backward = batch_y[:,-1,:]
