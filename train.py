@@ -22,6 +22,7 @@ warnings.filterwarnings('ignore')
 
 # Define some constants
 ROOT_PATH = "./data"
+CHECKPOINT_PATH = './checkpoint/state_dict_'
 FILE_NAME = 'strogatz_extended.json'
 SEED = 42
 EPOCHS = 1000
@@ -47,7 +48,7 @@ for ode in data:
         ode_funcs.append(ode_func)
 
 # Set best loss for each ode to be -ve infinity
-best_loss = [-float('inf')] * len(ode_funcs)
+best_loss = [float('inf')] * len(ode_funcs)
 
 # Make sure that there is no discrepancy
 assert len(best_loss) == len(ode_funcs)
@@ -92,6 +93,13 @@ for index, neural_ode in enumerate(ode_funcs):
             # Print the loss
             print(f'Epoch {itr} / {EPOCHS} Loss {loss.item()}')
             
+            # Save checkpoint if lesser error
+            if best_loss[index] > loss:
+                best_loss[index] = loss
+                ckpt_path = CHECKPOINT_PATH + str(id) + '.ckpt'
+                # print(ckpt_path)
+                torch.save({'state_dict': neural_ode.state_dict(),}, ckpt_path)
+
             # Backprop and step up
             loss.backward()
             optimizer.step()
