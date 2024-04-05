@@ -2,6 +2,7 @@
 
 #SBATCH -N 1            # number of nodes
 #SBATCH -c 8            # number of cores 
+#SBATCH -gpus=a100:1    # number of GPUS 
 #SBATCH -t 0-07:00:00   # time in d-hh:mm:ss
 #SBATCH -p general      # partition 
 #SBATCH -q public       # QOS
