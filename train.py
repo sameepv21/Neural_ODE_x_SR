@@ -18,6 +18,7 @@ from lib.odefunc import *
 # Misc
 import os
 import warnings
+from joblib import Parallel, delayed
 warnings.filterwarnings('ignore')
 
 # Define some constants
@@ -53,54 +54,47 @@ best_loss = [float('inf')] * len(ode_funcs)
 # Make sure that there is no discrepancy
 assert len(best_loss) == len(ode_funcs)
 
-# Loop to train a single ode
-from lib.utils import *
+# Function to train the ode
+def train_ode(index, neural_ode, train_dict):
+    # Define optimizer and scheduler
+    optimizer = optim.Adamax(neural_ode.parameters())
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.9987)
+    
+    # Training loop
+    for itr in range(EPOCHS):
+        # Separate required variables
+        X_train = torch.tensor(train_dict[index % 2]['y'])
+        t = torch.tensor(train_dict[index % 2]['t'])
 
-for index, neural_ode in enumerate(ode_funcs):
-    id = index + 1 # id of the ode under consideration
-
-    # Get the training data
-    X_train_dict = data[index]['solutions'][0]
-
-    # Number of trajectories 
-    num_traj = int(data[index]['dim'])
-
-    # Train for each trajectory
-    for i in range(num_traj):
-        # Define optimizer and scheduler
-        optimizer = optim.Adamax(neural_ode.parameters())
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.9987)
+        # Set required variables
+        optimizer.zero_grad()
         
-        # Training loop
-        for itr in range(EPOCHS):
+        # Get batches of data
+        batch_y0, batch_t, batch_y = get_batch_single(X_train, t, device = DEVICE)
+        batch_y0 = batch_y0.reshape(-1, 1)
 
-            # Separate required variables
-            X_train = torch.tensor(X_train_dict[i]['y'])
-            t = torch.tensor(X_train_dict[i]['t'])
-            init_values = X_train_dict[i]['init']
+        # Train the Neural ODEs
+        pred_y = odeint(neural_ode, batch_y0, batch_t)
+        loss = torch.mean((pred_y - batch_y)**2) * 10e4
+        
+        # Print the loss
+        print(f'Index {index} Epoch {itr} / {EPOCHS} Loss {loss.item()}')
+        
+        # Save checkpoint if lesser error
+        if best_loss[index] > loss:
+            best_loss[index] = loss
+            ckpt_path = CHECKPOINT_PATH + str(index) + '.ckpt'
+            # print(ckpt_path)
+            torch.save({'state_dict': neural_ode.state_dict(),}, ckpt_path)
 
-            # Set required variables
-            optimizer.zero_grad()
-            
-            # Get batches of data
-            batch_y0, batch_t, batch_y = get_batch_single(X_train, t, device = DEVICE)
-            batch_y0 = batch_y0.reshape(-1, 1)
+        # Backprop and step up
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+    
+    # Return loss
+    return loss
 
-            # Train the Neural ODEs
-            pred_y = odeint(neural_ode, batch_y0, batch_t)
-            loss = torch.mean((pred_y - batch_y)**2) * 10e4
-            
-            # Print the loss
-            print(f'Epoch {itr} / {EPOCHS} Loss {loss.item()}')
-            
-            # Save checkpoint if lesser error
-            if best_loss[index] > loss:
-                best_loss[index] = loss
-                ckpt_path = CHECKPOINT_PATH + str(id) + '.ckpt'
-                # print(ckpt_path)
-                torch.save({'state_dict': neural_ode.state_dict(),}, ckpt_path)
-
-            # Backprop and step up
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+delayed_funcs = [delayed(train_ode)(index, neural_ode, data[index // 2]['solutions'][0]) for index, neural_ode in enumerate(ode_funcs)]
+parallel_pool = Parallel(n_jobs = -1, backend='multiprocessing', verbose = 10)
+loss = parallel_pool(delayed_funcs)
