@@ -23,19 +23,21 @@ warnings.filterwarnings('ignore')
 
 # Define some constants
 ROOT_PATH = "./data"
-CHECKPOINT_PATH = './checkpoint/state_dict_'
+CHECKPOINT_PATH = './temp_checkpoint/state_dict_'
 FILE_NAME = 'strogatz_extended.json'
 SEED = 42
 EPOCHS = 1000
 N_LAYERS = 4
 N_UNITS = 50
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(DEVICE)
 
 # Define some default settings
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
+torch.multiprocessing.set_start_method('spawn', force=True)
 
 # Read dataset
 with open(os.path.join(ROOT_PATH, FILE_NAME)) as strogatz:
@@ -96,5 +98,5 @@ def train_ode(index, neural_ode, train_dict):
     return loss
 
 delayed_funcs = [delayed(train_ode)(index, neural_ode, data[index // 2]['solutions'][0]) for index, neural_ode in enumerate(ode_funcs)]
-parallel_pool = Parallel(n_jobs = os.cpu_count(), backend='multiprocessing', verbose = 10)
+parallel_pool = Parallel(n_jobs = 8, backend='multiprocessing', verbose = 10)
 loss = parallel_pool(delayed_funcs)
