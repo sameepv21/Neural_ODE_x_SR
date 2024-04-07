@@ -37,6 +37,7 @@ torch.manual_seed(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 torch.multiprocessing.set_start_method('spawn', force=True)
+torch.set_default_device(DEVICE)
 
 # Read dataset
 with open(os.path.join(ROOT_PATH, FILE_NAME)) as strogatz:
