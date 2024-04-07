@@ -36,6 +36,8 @@ torch.set_default_dtype(torch.float64)
 torch.manual_seed(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
+torch.multiprocessing.set_start_method('spawn', force=True)
+torch.set_default_device(DEVICE)
 
 # Read dataset
 with open(os.path.join(ROOT_PATH, FILE_NAME)) as strogatz:
@@ -95,6 +97,7 @@ def train_ode(index, neural_ode, train_dict):
     # Return loss
     return loss
 
-delayed_funcs = [delayed(train_ode)(index, neural_ode, data[index // 2]['solutions'][0]) for index, neural_ode in enumerate(ode_funcs)]
-parallel_pool = Parallel(n_jobs = os.cpu_count(), backend='multiprocessing', verbose = 10)
-loss = parallel_pool(delayed_funcs)
+if __name__ == '__main__':
+    delayed_funcs = [delayed(train_ode)(index, neural_ode, data[index // 2]['solutions'][0]) for index, neural_ode in enumerate(ode_funcs)]
+    parallel_pool = Parallel(n_jobs = 8, backend='multiprocessing', verbose = 10)
+    loss = parallel_pool(delayed_funcs)
