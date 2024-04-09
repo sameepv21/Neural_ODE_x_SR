@@ -5,7 +5,7 @@ import torch.nn as nn
 # Data Manipulation Lib
 import numpy as np
 
-def get_batch_single(data, t, batch_len=64, batch_size=64, device = torch.device("cpu")):
+def get_batch_single(data, t, batch_len=50, batch_size=50, device = torch.device("cpu")):
 	s = torch.from_numpy(np.random.choice(np.arange(len(t) - batch_len, len(t), dtype=np.int64), batch_size, replace=False))
 
 	batch_y0 = data[0,s]  # (M, D)
